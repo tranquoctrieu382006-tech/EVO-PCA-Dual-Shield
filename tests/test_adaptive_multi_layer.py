@@ -7,6 +7,14 @@ Usage:
 """
 import sys
 import os
+
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 sys.path.insert(0, os.path.abspath('.'))
 
 from core.pipeline import UnifiedFirewallPipeline
@@ -172,10 +180,9 @@ def run_adaptive_tests():
             for i, (setup_payload, action_type) in enumerate(tc["session_setup"]):
                 try:
                     pipeline.scan(
-                        user_input=setup_payload,
+                        action=setup_payload,
                         action_type=action_type,
                         session_id=session_id,
-                        step_number=i + 1,
                     )
                 except Exception:
                     pass  # Setup steps may be blocked, that's OK
@@ -185,10 +192,9 @@ def run_adaptive_tests():
             if tc.get("use_unique_sessions"):
                 # Each step in a different session to test session rotation
                 result = pipeline.scan(
-                    user_input=tc["payload"],
+                    action=tc["payload"],
                     action_type="prompt",
                     session_id=f"rotated_{tc['id']}_unique",
-                    step_number=1,
                 )
             elif tc.get("force_review"):
                 # Force through V61 slow path for canary tests
@@ -199,12 +205,10 @@ def run_adaptive_tests():
                     force_review=True,
                 )
             else:
-                step = len(tc.get("session_setup", [])) + 1
                 result = pipeline.scan(
-                    user_input=tc["payload"],
+                    action=tc["payload"],
                     action_type="prompt",
                     session_id=session_id,
-                    step_number=step,
                 )
             
             # Extract decision
